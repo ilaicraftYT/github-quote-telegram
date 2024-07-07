@@ -6,6 +6,8 @@ A Telegram bot that sends code from GitHub.
 
 Open up any file within a GitHub repository, click on a line number or various (holding <kbd>Shift</kbd>) and in any chat, type `@githubquotebot` and paste the URL (should end with `#L5-L21`, for example).
 
+Profiles automatically work! (i.e. `https://github.com/ilaicraftYT/ilaicraftYT`)
+
 ## Running
 To install dependencies:
 

@@ -1,4 +1,4 @@
-import { Bot, type Context, InlineQueryResultBuilder } from "grammy";
+import { Bot, InlineQueryResultBuilder } from "grammy";
 
 const bot = new Bot(process.env.TOKEN as string);
 
@@ -7,51 +7,56 @@ bot.command("start", (ctx) => {
     `Hi! I quote from your GitHub repository.
     Type @githubquotebot in any chat and then type a GitHub link.
     Found a bug? Report it on our GitHub.
-    See https://github.com/ilaicraftYT/github-quote-telegram for more information.`,
+    See https://github.com/ilaicraftYT/github-quote-telegram for more information.`
   );
 });
 
 bot.on("inline_query", async (ctx) => {
-  const query = ctx.inlineQuery.query;
+  try {
+    const query = ctx.inlineQuery.query;
 
-  // If it's a link...
-  if (/https:\/\/github.com\//g.test(query)) {
-    const split = query.split("/");
-    const repoOwner = split[3];
-    const repoName = split[4];
-    const path = split.slice(6)?.join("/");
-    const lines = split[split.length - 1]
-      ?.split("#")[1]
-      ?.replace(/L/g, "")
-      ?.split("-");
+    // If it's a link...
+    if (/https:\/\/github.com\//g.test(query)) {
+      const split = query.split("/");
+      const repoOwner = split[3];
+      const repoName = split[4];
+      const path = split.slice(6)?.join("/");
+      const lines = split[split.length - 1]
+        ?.split("#")[1]
+        ?.replace(/L/g, "")
+        ?.split("-");
 
-    if (!repoOwner || ((!lines || !lines[0]) && repoOwner != repoName)) return; // malformed URL
-    const code = await fetchCode(
-      repoOwner,
-      repoName,
-      repoOwner == repoName ? "main/README.md" : path
-    );
-
-    if (!code) return; // didn't found repo
-
-    const styled = styleCode(
-      code,
-      repoOwner != repoName ? parseInt(lines[0]) : 0,
-      repoOwner != repoName ? parseInt(lines[1]) : undefined
-    );
-
-    const result = composeResponse(
-      repoName == repoOwner && !!code,
-      !lines?.[1],
-      {
+      if (!repoOwner || ((!lines || !lines[0]) && repoOwner != repoName))
+        return; // malformed URL
+      const code = await fetchCode(
         repoOwner,
         repoName,
-        path,
-        lines,
-        styled,
-      }
-    );
-    ctx.answerInlineQuery(result, { cache_time: 60 });
+        repoOwner == repoName ? "main/README.md" : path
+      );
+
+      if (!code) return; // didn't found repo
+
+      const styled = styleCode(
+        code,
+        repoOwner != repoName ? parseInt(lines[0]) : 0,
+        repoOwner != repoName ? parseInt(lines[1]) : undefined
+      );
+
+      const result = composeResponse(
+        repoName == repoOwner && !!code,
+        !lines?.[1],
+        {
+          repoOwner,
+          repoName,
+          path,
+          lines,
+          styled,
+        }
+      );
+      ctx.answerInlineQuery(result, { cache_time: 60 });
+    }
+  } catch (e) {
+    console.debug("Error: ", e);
   }
 });
 
@@ -64,7 +69,9 @@ async function fetchCode(repoOwner: string, repo: string, path: string) {
   const res = await fetch(
     `https://raw.githubusercontent.com/${repoOwner}/${repo}/${path}`
   );
-  return res.ok ? (await res.text()).replace(/\\/g, "\\").replace("`", "\\`") : null;
+  return res.ok
+    ? (await res.text()).replace(/\\/g, "\\").replace("`", "\\`")
+    : null;
 }
 
 function styleCode(code: string, start: number, end?: number) {
@@ -121,8 +128,8 @@ function composeResponse(
 
   const lines = fromProfile
     ? ""
-    : `, lines **${data.lines[0]}** ${
-        !singleLine ? "to **" + data.lines[1] + "**" : "and 10 adjacent"
+    : `, line **${data.lines[0]}** ${
+        !singleLine ? "to **" + data.lines[1] + "**" : "and **10** surrounding\\."
       }`;
 
   return [
